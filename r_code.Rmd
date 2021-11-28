@@ -1,0 +1,954 @@
+---
+title: '**Data Analysis: Assignment 1**'
+output:
+  html_notebook: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+#### *Tidied by: Franco Anderson (21675910) & Juan Möller (21597340)*
+
+<br>
+
+## Table of Contents
+
+
+  SECTION       | TITLE
+-------------   | -------------
+  Section 1     | Introduction
+  Section 1     | Package and library imports
+  Section 1     | Data imports
+  Section 2     | Plots and discussion   
+  Section 3     | Reflection
+  Section 3     | Conclusion
+
+
+# **Section 1**
+
+## Introduction
+<br>
+<p>The following RMD notebook contains information, data, and visualizations relating to the first assignment of the data analysis block. Assignment one required the accurate reproduction of COVID-19 visualizations as shown on the [Media Hack](https://mediahack.co.za/datastories/coronavirus/dashboard/) website using Rstudio. Apart from the colours used by Media Hack, all other visual aspects of the plots were reproduced as far as possible. A particular focus was also placed on producing a logical and coherent document which can be easily read and understood by anyone.</p>
+<p>The notebook is divided into three unique sections, each focusing on specific parts of the assignment. Section one includes relevant information on the R packages used to assist in the process of wrangling and processing data as well as producing good visualizations. It also contains information on our data sources and the methods used to retrieve the data. Section two contains the main part of the assignment -- the code for processing data and visualizations -- and discussions on the various plots. Section three includes our retrospective section and, finally, the conclusion.</p>
+
+## Package and library imports
+<br>
+<p>These packages have been commented out. If this project is to be run for the first time, the comments are to be removed and the chunk should be run.</p>
+
+```{r packages, message=FALSE, warning=FALSE}
+#install.packages("tidyverse")
+#install.packages("gglot2")
+#install.packages("zoo")
+#install.packages("scales")
+#install.packages("rnaturalearthdata")  #Bonus
+#install.packages("rgeos")              #Bonues
+```
+<br>
+<p>These libraries are essential for the code to work. This chunk should be run once.</p>
+
+```{r Setup, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(zoo)            #rollmean
+library(scales)
+library(rnaturalearth)  #Bonus
+library(rgeos)          #Bonus
+
+```
+
+## Data imports
+<br>
+<p>The following chunk contains information on the location of the data used to produce the COVID-19 visualizations. Some of the data used to produce the plots were obtained using screen scraping techniques learnt in the second week of the data analysis block. Where conventional screen scraping techniques did not work, an alternative method using JavaScript was used to convert HTML data tables to CSV files for easier processing on Excel and Rstudio. In total, four sources were used to obtain all of the data used in this notebook. Where possible, data were collected for the period between March 2020 and 22 June 2021.</p>
+<p>
+Data sources: 
+1.[Media Hack](https://mediahack.co.za/datastories/coronavirus/dashboard/) 
+2.[OWID](https://ourworldindata.org/coronavirus) 
+3.[NICD](https://www.nicd.ac.za/diseases-a-z-index/covid-19/surveillance-reports/weekly-hospital-surveillance-datcov-update/) 
+4.[SAMRC](https://www.samrc.ac.za/reports/report-weekly-deaths-south-africa) 
+</p>
+
+```{r Data Tables, echo=TRUE, message=FALSE, warning=FALSE}
+sa_cases <- read_csv("DATA/sa_cases.csv")                      #retrieved with screen scraping
+
+province_data<-read.csv("DATA/province_data.csv")              #retrieved with screen scraping
+  
+provincial_tests <- read_csv("DATA/provincial_tests.csv")      #retrieved with screen scraping
+
+excess_deaths<- read.csv("DATA/excess_deaths.csv")             #retrieved from SAMRC
+
+continents_daily_cases <- read_csv("DATA/continents_daily_cases.csv")    #retrieved from OWID
+
+sa_reproduction_rate <- read_csv("DATA/sa_reproduction_rate.csv")        #retrieved from OWID                                    
+
+sa_hospitalisations <- read_csv("DATA/sa_hospitalisations.csv")          #retrieved from NICD
+
+province_data_map<-read.csv("DATA/province_data_map.csv")              #BONUS
+
+```
+<br>
+
+# **Section 2**
+
+## Plots and discussion
+<br>
+<p>As mentioned in the introduction, all plots were reproduced as accurately as possible using the sourced data and the Media Hack website as a guide. It was only the colours that were changed and applied consistently across all visuals. Plot headings, subheadings, and labels were also matched as far as possible. Each of the visuals below are preceded by a short discussion on the specific plot.
+</p>
+### Plot 1: Daily Vaccinations
+<br>
+<p>The Daily vaccinations plot aims to indicate the daily number of vaccinations within South Africa over a period of time. Thus the date was needed in the correct format to scale it across the x-axis. *A geom_col* visual was chosen as it indicates the level of vaccinations per day while the columns are easily comparable. A clear increase over time is seen indicating an effort to increase vaccinations in the country. </p>
+
+```{r Plot 1: Daily Vaccinations, echo=TRUE, fig.align="center", fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+plot_1_table<-sa_cases %>% 
+  select(date,vaccinated_daily)%>% 
+  mutate(date=as.Date(date,"%d/%m/%Y"))                         #converting date data to the desired date format
+
+plot_one<-plot_1_table %>% filter(date>=as.Date("2021-03-01") & date<=as.Date("2021-06-21")) %>% #creating new plot
+  ggplot(mapping = aes(y=vaccinated_daily,x=date))+
+  geom_col(width = 0.4, fill="#3895D3")+
+  scale_y_continuous(breaks = c(0,50000), limits = (c(0,100000)))+
+  scale_x_date(date_breaks = "1 month",                      #displays one day per month on plot
+               date_labels = "%d %b")+                       #displays date in required format on plot
+  labs(x="Date", y="Cumulative Cases",                       #add label names to axis
+       title="Daily Vaccinations",
+       #subtitle = "subtitle",
+       #caption = "caption")
+       vaccinated_daily = "Legend")+
+  geom_hline(yintercept=c(0,50000), linetype="dashed", color="grey60")+
+  theme(                                                      #various theme settings
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),                        #panel.grid.minor & panel.grid.major both removed to comply with mediahack visual
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        plot.subtitle = element_text(colour = "grey40"),
+        axis.title = element_blank(),
+        axis.ticks = element_blank()
+        )
+plot_one
+```
+***
+
+### Plot 2: Total Vaccinations
+<br>
+<p>The total vaccinations plot aims to indicate the overall vaccinations within South Africa over a period of time. Thus the date was needed as the x-axis in order to account for the increase or decrease in overall vaccine injections. A geom_point visual was chosen as it indicates specific entries in the vaccination period. The high volume of points thus leads to a congruent line graph which would thus indicate the increase or decrease over time</p>
+
+```{r Plot 2: Total Vaccinations, echo=TRUE, fig.align="center", fig.height=5, fig.width=8, message=FALSE, warning=FALSE}
+plot_2_table <- sa_cases %>% select(date, vaccinated_total) %>% 
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>%                    #mutate date column to date format
+  filter(!is.na(date)) %>% 
+  filter(!is.na(vaccinated_total), vaccinated_total>0)         #filter unwanted values
+
+total_vaccinations <- ggplot(data = plot_2_table, aes(x=date , y=vaccinated_total))+
+  geom_point(color = "#3895D3")+
+  scale_y_continuous(limits = c(0,2500000), breaks = seq(0, 2500000, by = 500000))+
+  scale_x_date(limits = as.Date(c("2021-02-18","2021-06-19")), date_breaks = ("1 month"), date_labels = "%d %b")+     #displays date in required format on plot
+  geom_hline(yintercept=c(0,1000000, 2000000), linetype="dashed", color="grey60")+
+  geom_text(data = plot_2_table %>% filter(date == last(date)), aes(y=vaccinated_total, label = vaccinated_total), vjust=-0.7, hjust=0.8)+
+  labs(title = "Total Vaccinations")+                 
+  theme(                                                      #various theme settings
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),                        #panel.grid.minor & panel.grid.major both removed to comply with mediahack visual
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        plot.subtitle = element_text(colour = "grey40"),
+        axis.title = element_blank(),
+        axis.ticks = element_blank()
+        )
+total_vaccinations
+```
+***
+
+### Plot 3: Daily Confirmed Cases
+<br>
+<p>The Daily confirmed cases plot aims to indicate the number of daily positive COVID-19 cases within South Africa over a period of time. Thus the date was needed in the correct format to scale it across the x-axis. The *geom_col* and *geom_line* plots were chosen as the columns indicates the number of cases while the line could be used to plot the 7-day average. The coming of a third wave of increased daily cases can be seen with the 7-day average increasing exponentially starting  in May 2021.</p>
+
+```{r Plot 3: Daily confirmed cases, echo=TRUE, fig.align="center", fig.height=5, fig.width=10, message=FALSE, warning=FALSE}
+plot_3_table<-sa_cases %>% 
+  select(date, cases_daily )%>% 
+  mutate(date=as.Date(date,"%d/%m/%Y"))                #mutate date column to date format
+
+plot_three<-plot_3_table %>% filter(date>=as.Date("2020-03-01") & date<=as.Date("2021-06-21")) %>% 
+  ggplot(mapping = aes(y=cases_daily,x=date))+
+  geom_col(width = 0.3, fill="#3895D3")+
+  geom_line(aes(y=rollmean(cases_daily, 7, na.pad=TRUE)), color="grey30", size=1) +  #7 day moving average line using rollmean 
+  scale_y_continuous(breaks = c(0,20000,10000), limits = (c(0,30000)))+
+  scale_x_date(date_breaks = "1 month",               #displays one day per month on plot
+               date_labels = "%d %b")+                #displays date in required format on plot
+  labs(x="Date", y="Daily Cases",                     #add labels to axis
+       title="Daily confirmed cases",
+       subtitle ="This chart shows the daily confirmed cases since March 2020. The levels refer to the lockdown levels. Green line is the 7-day rolling average" )+
+  geom_hline(yintercept=c(0,10000,20000), linetype="dashed", color="grey60")+
+  theme(                                                      #various theme settings
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),                        #panel.grid.minor & panel.grid.major both removed to comply with mediahack visual
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        plot.subtitle = element_text(colour = "grey40"),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_text()
+        )
+plot_three
+```
+***
+
+### Plot 4: Active Case Total by Day
+<br>
+<p>The active case total by day suggests the overall daily active cases per month. The slopes in-between the spikes were especcially important to indicate the active cases over time as the level of 'lockdown' changes and what wave the country was in. The geom_col visual was chosen as each day would indicate a specific amount of of active cases and not the accumulation of the cases. The column graph also exceeds in telling when the country had its worse month and during which 'lockdown' level it took place in.</p>
+
+```{r Plot 4: Active Cases Total by Day, fig.align="center", fig.height=4, fig.width = 10, message=FALSE, warning=FALSE}  
+plot_4_table <- sa_cases %>%  select(date, active_cases) %>% 
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>%                   #mutate date column to date format
+  filter(!is.na(date)) %>% 
+  filter(!is.na(active_cases))
+
+daily_active_cases <- ggplot(data = plot_4_table, mapping = aes(x = date, y = active_cases))+
+  geom_col(width = 0.4, fill="#3895D3")+
+  geom_hline(yintercept=c(0,100000, 200000), linetype="dashed", color="grey60")+
+  scale_x_date(limits = as.Date(c("2020-04-01","2021-06-21")), date_breaks = ("1 month"), date_labels = "%d %b")+
+  labs(
+       title = "Active cases total by day")+
+  theme(
+        axis.text.x = element_text(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+daily_active_cases
+```
+***
+
+### Plot 5: Daily Deaths
+<br>
+<p>As an important figure to keep right next to the daily active cases from before, the daily deaths indicate the number of daily deaths within a specific month. As with the daily active cases, it indicates when and how many people past away within a specific month. The geom_col was again chosen as the figure of choice in order to indicate the rise and fall of daily deaths due to COVID-19.</p>
+
+```{r Plot 5: Daily Deaths, fig.align="center", fig.height=4, fig.width = 10, message=FALSE, warning=FALSE}
+plot_5_table <- sa_cases %>%
+  select(date, deaths_daily)%>%
+  mutate(date=as.Date(date,"%d/%m/%Y"))                                           #mutate date column to date format
+ 
+daily_deaths <- ggplot(data = plot_5_table, mapping = aes(x = date, y = deaths_daily))+
+  geom_col(width=0.4, fill = "#3895D3")+                                          #visual customization of columns
+  geom_hline(yintercept=c(0,200, 400, 600, 800), linetype="dashed", color="grey60")+
+  scale_x_date(limits = as.Date(c("2020-04-01","2021-06-21")), date_breaks = ("1 month"), date_labels = "%d %b")+
+  labs(
+       title = "Daily Deaths")+
+  theme(
+        axis.text.x = element_text(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+daily_deaths
+```
+***
+
+### Plot 6: Daily Case Trends
+<br>
+<p>The Daily case trends plot aims to indicate the trend of the number of daily positive COVID-19 cases across South African provinces over a period of time. The *geom_line* plot was chosen to easily compare the waves across provinces. The coming of a third wave of increased daily cases across most provinces can be seen with the line sloping up starting in May 2021. Other observations include the fact that some provinces are experiencing their third wave much earlier than others.</p>
+
+```{r Plot 6: Daily Case Trends, echo=TRUE, fig.align="center", fig.height=6, fig.width = 10, message=FALSE, warning=FALSE}
+plot_6_table<-province_data %>% select(date, province, cases_seven_day_average) %>%              #new table for plot six with required variables
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>%                                           
+  filter(province!="Unknown" & date>=as.Date("2020-10-30") & date<=as.Date("2021-06-21"))        #remove observations not needed
+  
+plot_6_table$province=toupper(plot_6_table$province)                                             #upper case all province names
+
+plot_six<-plot_6_table %>% ggplot(mapping = aes(x=date, y=cases_seven_day_average))+
+  geom_line(color="#3895D3", size=1)+
+  scale_y_continuous()+
+  scale_x_date(breaks = as.Date(c("2020-11-11","2021-06-21")),      #displays two selected dates
+               date_labels = "%d %b")+                              #displays date in required format on plot
+               #guide = guide_axis(n.dodge=2))+                     #prevents labels from overlapping
+  labs(x="Date", y="Seven day average of new cases by province",    #add labels to axis
+       title="Daily case trends")+
+  facet_wrap(~province, scales = "free", ncol=4)+           #facet to provide each province with different plot and independent scales
+  theme(
+        legend.position = "right",                          #various visual customization / no legend on graph
+        panel.spacing = unit(1, "cm"),                      #space panels apart
+        panel.grid = element_blank(),
+        panel.background = element_rect(colour = "black", size=.5, fill=NA),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        axis.title=element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks = element_blank()
+        )
+plot_six
+```
+***
+
+### Plot 7: Cases vs Active Cases
+<br>
+<p>Being one of the more important visuals, the active vs confirmed cases visual tends to indicate the severity of which COVID-19 has on not only the citizens as a whole, but also on the health care infrastructure. The confirmed cases indicates the accumulation of all positive cases within South Africa, but the number of active cases are the confirmed cases that are not recovering and or did not past away due to COVID-19. Thus, to scale them with each other indicates the overall impact that the pandemic has on South Africa. A line geom was chosen as the best fit as the line graph doesn't necessarily indicate specific points, but indicates a high overview of the growth and slope of a specific line in accordance with the other. The last number of confirmed and active cases are displayed to indicate the last case number for active and confirmed cases.</p>
+
+```{r Plot 7: Cases vs Active Cases, fig.align="center",fig.height=6,  fig.width = 7, message=FALSE, warning=FALSE}
+plot_7_table <- sa_cases %>% mutate(date=as.Date(date,"%d/%m/%Y")) %>% 
+  mutate(cases_daily = cumulative_cases - cumulative_deaths) %>% 
+  select(date, active_cases, cases_daily)
+
+cases_vs_active <- ggplot(data = plot_7_table, mapping= aes(x = date))+
+  geom_line(method = "gam", aes(y = cases_daily, color = "Cases Daily") ,size=1)+
+  geom_line(method = "gam", aes(y = active_cases,color = "Active Cases"),size=1)+
+  geom_text(data = plot_7_table %>% filter(date == last(date)), aes(y = cases_daily, label = cases_daily), vjust = 0.5, hjust = 1.2)+
+  geom_text(data = plot_7_table %>% filter(date == last(date)), aes(y = active_cases, label = active_cases), vjust = -0.5, hjust = 1.2)+
+  scale_color_manual(values=c("Cases Daily" = "navy", "Active Cases" = "#3895D3"))+
+  scale_y_continuous(breaks = c(0, 500000, 1000000, 1500000))+
+  scale_x_date(limits = as.Date(c("2020-04-01","2021-06-21")), date_breaks = ("3 months"), date_labels = "%d/%m")+
+  labs(title = "Cases vs Active Cases")+
+  theme(
+        legend.position = "top",
+        legend.title = element_blank(),
+        axis.text.x = element_text(hjust = 1),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+cases_vs_active
+```
+***
+
+### Plot 8: Total Deaths
+<br>
+<p>The total deaths plot aims to indicate the cumulative number of deaths and case fatality rate over a period of time. A *geom_line* plot was chosen to visualize the increasing number of deaths and fatality rate. A rapid increase in deaths can be observed with each wave of increased infections. A challenging plot to visualize as Rstudio does not provide an easy way to plot two geoms with separate y-scales.</p>
+
+```{r Plot 8: Total Deaths, fig.align="center",fig.height=6,  fig.width = 7, message=FALSE, warning=FALSE}
+plot_8_table<-sa_cases %>% 
+  select(date, cumulative_deaths, cumulative_cases)%>% 
+  mutate(date=as.Date(date,"%d/%m/%Y"), fatality_rate = cumulative_deaths/cumulative_cases*100)%>%   #calculating the case fatality rate
+  filter(date>=as.Date("2020-03-01") & date<=as.Date("2021-06-21"))
+
+factor=8000          #appropriate multiplication factor used for most accurate second axis results/ ggplot does not seem to like adding plots with separate y-scales 
+
+plot_eight<-plot_8_table %>% ggplot(mapping=aes(x=date))+
+  geom_text(data = plot_8_table %>% filter(date == last(date)), aes(y=cumulative_deaths, label = cumulative_deaths),vjust = -0.5, hjust=1)+ #adding a label to the final data point
+  geom_line(aes(y=fatality_rate*factor, linetype="Case Fatality Rate (CFR)"),color="navy" ,size=1.2)+       #assigning line types as in the specification 
+  geom_line(aes(y=cumulative_deaths, linetype="Total deaths"),color="#3895D3",size=1.2)+   
+  scale_linetype_manual(values=c("Case Fatality Rate (CFR)" ='dotted', "Total deaths" ='solid'))+       #associating line types with the legend
+  scale_y_continuous(limits=c(0, 80000), sec.axis = sec_axis(~./factor, name = "Case Fatality Rate",
+                                                             labels = function(b) { paste0(round(b, 0), "%")}))+    #proper labeling/adding % behind each value
+  scale_x_date(breaks = as.Date(c("2020-04-01","2020-07-01","2020-10-01","2021-01-01","2021-04-01")),   #displays one day per month on plot
+               date_labels = "%d/%m")+    #displays date in required format on plot
+  labs(linetype="",
+       x="Date", y="Total Deaths",    #add labels to axis
+       title="Total Deaths")+
+  theme(legend.position = "top",
+        axis.text.x = element_text(hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+
+plot_eight
+```
+***
+
+### Plot 10: Deaths by Province
+<br>
+<p>The death by province visual is a representation of the aggregated number of deaths within each specific province. The use of aggregation to sum all of the daily deaths by province, was to indicate the differentiation of daily deaths between each province. This graph thus indicates the severity of COVID-19 on each specific province. The use of a bar graph is generally to measure variables between different groups and this visual is no different. Thus, the bar graph was an indication of severity.</p>
+
+```{r Plot 10: Deaths by Province, fig.align="center", fig.width = 8, message=FALSE, warning=FALSE}
+plot_10_table <- aggregate(province_data$daily_deaths, by=list(province_id=province_data$province_id), F = sum)%>%  #aggregating data by unique province name
+  filter(province_id!="U")%>% 
+  rename(total_deaths = x)               
+
+plot_ten<-plot_10_table %>%
+  ggplot(mapping = aes(x=reorder(province_id,desc(total_deaths)), y=total_deaths))+  #ordering province according to total deaths
+  geom_col(width = 0.8,fill="#3895D3")+
+  scale_fill_continuous(trans = 'reverse')+               #reversing legend colours on continuous scale
+  scale_y_continuous()+
+  geom_text(aes(label = total_deaths), vjust = -0.5)+
+  labs(x="Deaths", y="Province",    #add labels to axis
+        title="Deaths by Province")+
+  theme(
+        #legend.position = "top",
+        axis.text.x = element_text(hjust = 1),
+        axis.text.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+plot_ten
+
+```
+
+***
+
+### Plot 11: Deaths by Province per 100k
+<br>
+<p>The death by province per 100k visual is a representation of the number of deaths within each specific province per 100,000 people. This graph thus indicates the severity of COVID-19 on each specific province on as a rate. A bar graph is generally used to measure variables between different groups and this visual is no different. An observation to make here is that although the Free State and Northern Cape have total deaths that are much less than that of the top four provinces, they have a much higher death rate per 100,000 people. The opposite is true for Gauteng.</p>
+
+```{r Plot 11: Deaths by Province per 100k, fig.align="center", fig.width = 8, message=FALSE, warning=FALSE}
+plot_11_table<- aggregate(province_data$deaths_per_100k, by=list(province_id=province_data$province_id), F = max)%>%  #extract the max value per province
+  filter(province_id!="U") %>% 
+  rename(deaths_per_100k = x)               #aggregating data by unique province name
+
+plot_eleven<-plot_11_table %>%
+  ggplot(mapping = aes(x=reorder(province_id,desc(plot_10_table$total_deaths)), y=deaths_per_100k))+ # keeping plot ten province order
+  geom_col(width = 0.8, fill="#3895D3")+
+  scale_fill_continuous(trans = 'reverse')+               #reversing legend colours
+  scale_y_continuous()+
+  geom_text(aes(label = deaths_per_100k), vjust = -0.5)+  #adding a labelled point on the plot          
+  labs(x="Deaths", y="Province",    #add labels to axis
+      title="Deaths by Province (per 100k)")+
+  theme(legend.position = "top",
+        axis.text.x = element_text(hjust = 1),
+        axis.text.y = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+
+plot_eleven
+```
+***
+
+### Plot BONUS
+<br>
+<p>BONUS: This plot uses similar data as Plot 11 but uses it to display the data on a map of South Africa. The coordinates are linked to the capital of each province.</p>
+
+```{r Plot 11.5: Bonus, fig.align="center", fig.width = 7, message=FALSE, warning=FALSE}
+plot_bonus_table<-province_data_map %>%                 #special table for bonus plot
+  select(province,deaths_per_100k,Latitude,Longitude)
+
+rnaturalearth::ne_countries(                            #rnaturalearth to select South Africa as the desired region
+  scale = "small", returnclass = "sf") %>%  
+  select(name, continent, geometry) %>%  
+  filter(name == 'South Africa') ->  
+za  
+  #
+map<-ggplot(data = plot_bonus_table) +                 #creating the map 
+  ggplot2::geom_sf(data = za) +  
+  geom_point(aes(x = Longitude,
+                   y = Latitude,
+                   colour = deaths_per_100k), size=9,
+               alpha = .9)+
+  geom_text(aes(Longitude, Latitude, label = province), size=3, vjust=-1.5)+
+  labs(y="Province",                                   #add labels to axis
+      title="Deaths by Province (per 100k)",
+      colour="Deaths per 100k")+
+  theme(legend.position = "right",
+        axis.text = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+map
+```
+***
+
+### Plot 12: Prov Infections per 100,000 Population
+<br>
+<p>The provincial infections per 100,000 people visual is a representation of the total number of infections within each specific province per 100,000 people. This graph thus indicates the severity of COVID-19 infections on each specific province as a comparable rate. A bar graph is generally used to measure variables between different groups and this visual is no different. Once again, the infection rate of the Northern Cape and the Free state is quite high compared to other provinces with much larger populations.</p>
+
+```{r Plot 12: Prov Infections per 100k, echo=TRUE, fig.align="center", message=FALSE, warning=FALSE}
+plot_12_table<-province_data %>% 
+  select(province,cumulative_cases,population) %>%
+  filter(province!="Unknown") %>% 
+  group_by(province) %>%         
+  summarise_each(funs(max)) %>% 
+  mutate(calc=cumulative_cases/(population/100000)) #calculating cases per 100000
+  
+plot_twelve<-plot_12_table %>%
+  ggplot(mapping = aes(y=reorder(province,calc), x=calc))+ # keeping plot ten province order
+  geom_col(fill="#3895D3",width = 0.8)+
+  #scale_fill_continuous(trans = 'reverse')+               #reversing legend colours
+  scale_x_continuous()+
+  geom_text(aes(label = round(calc)), hjust=-0.1)+  #adding a labelled point on the plot          
+  labs(x="Cases per 100k", y="Province",    #add labels to axis
+        title="Prov Infections per 100,000 Population")+
+  theme(legend.position = "top",
+        axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+plot_twelve
+
+```
+
+***
+
+### Plot 13: Confirmed and Active Cases by Province 
+<br>
+<p>A sort of a combination between plots seven and ten, the confirmed and active cases by province indicate the severity of COVID-19 on the health care infrastructure and its citizens, but at a provincial scale. The comparison between active and confirmed cases is important in terms of isolating a specific province due to their infections. Gauteng for instance is seeing quite a differentiation between its cumulative confirmed cases and its active cases. Facet was used to group confirmed and active cases by their specific province.</p>
+
+```{r Plot 13: Confirmed and Active Cases by Province, fig.align="center", fig.width=10, fig.height=4, message=FALSE, warning=FALSE}
+plot_13_table <- province_data %>% 
+  filter(province!="Unknown") %>% 
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>% 
+  group_by(province) %>% 
+  mutate(active_cases=cumulative_cases - cumulative_recoveries - cumulative_deaths) %>% 
+  select(date, active_cases, cumulative_cases) 
+
+con_act_cases_graph <- ggplot (data = plot_13_table, mapping = aes(x=date))+
+  geom_line(method = "gam", mapping = aes( y = cumulative_cases), color="#3895D3", size=1)+
+  geom_line(method = "gam", mapping= aes( y = active_cases), color="navy", size=1)+
+  scale_x_date(limits = as.Date(c("2020-03-23","2021-06-21")), date_breaks = "1 day", date_labels = "%d %b %y")+
+  geom_text(data = plot_13_table %>% filter(cumulative_cases == last(cumulative_cases)), aes(y = cumulative_cases, label = cumulative_cases), hjust = 1, vjust = 0.75)+
+  labs(title = "Confirmed and Active Cases by Province")+
+  facet_wrap(~province, ncol=5)+
+  theme(legend.position = "right",      #various visual customization / no legend on graph
+        panel.spacing = unit(1, "cm"),        #space panels apart
+        panel.grid = element_blank(),
+        panel.background = element_rect(colour = "black", size=.5, fill=NA),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        axis.title=element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank()
+        )
+
+con_act_cases_graph
+```
+***
+
+### Plot 14: Average Daily Test per Week
+<br>
+<p>Average daily tests per week is an important visual in terms of the amount of tests that were done during a specific week. This visual acts as a preemptive observation to the following visual. The amount of tests and the amount of those tests that were positive are important to note in terms of when the most tests came out as positive. The horizontal column graph was used to congruently measure both the average positives and tests per week with one another. Thus, the graph indicates that when more tests are done, the higher the probability of a positive test is apparent.</p>
+
+```{r Plot 14: Average daily test per week, fig.align="center", fig.height=9, fig.width = 12, message=FALSE, warning=FALSE}
+plot_14_table <- sa_cases %>% 
+  mutate(weekly_tests = round(weekly_tests/7), digits = 1) %>% 
+  filter(!is.na(weekly_tests)) %>% 
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>% 
+  select(date, weekly_tests)
+
+avg_daily_test_graph <- ggplot(data = plot_14_table, mapping = aes(x = date, y = weekly_tests))+
+  geom_col(fill = "#3895D3", width = 4)+
+  geom_text(aes(label = weekly_tests), hjust = -0.25)+
+  coord_flip()+
+  scale_y_continuous()+
+  scale_x_date(limits = as.Date(c("2020-04-06","2021-06-21")), date_breaks = ("1 week"), date_labels = "%d %b")+
+  labs(title = "Average Daily Test per Week")+
+        theme(                                #various visual customization / no legend on graph
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank()
+        )
+
+avg_daily_test_graph
+  
+```
+***
+
+### Plot 15: Average Daily Positives per Week
+<br>
+<p>As stated within the previous plot discussion, the average daily positives play a important role in terms of overall infection rate. When more tests are done, the more positive cases are noted. Thus, the column graph is once again used in parallel with the previous one to indicate the amount of positive cases per daily tests.</p>
+
+```{r Plot 15: Average daily positives per week, fig.align="center", fig.height=9, fig.width = 12 ,message=FALSE, warning=FALSE}
+plot_15_table <- sa_cases %>%
+  mutate(weekly_cases = round(weekly_cases/7), digits = 1) %>% 
+  filter(!is.na(weekly_cases)) %>% 
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>% 
+  select(date, weekly_cases)
+
+avg_daily_pos_graph <- ggplot(data = plot_15_table, mapping = aes(x = date, y = weekly_cases))+
+  geom_col(fill = "#3895D3",width = 4)+
+  geom_text(aes(label = weekly_cases), hjust = -0.25)+
+  coord_flip()+
+  scale_y_continuous()+
+  scale_x_date(limits = as.Date(c("2020-04-03","2021-06-21")), date_breaks = ("1 week"), date_labels = "%d %b")+
+  labs(title = "Average daily positives per week")+
+  theme(                                #various visual customization / no legend on graph
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank()
+        )
+
+avg_daily_pos_graph
+```
+***
+
+### Plot 16: No of Test per Positive case (weekly)
+<br>
+<p>As with the two above-mentioned plot discussions, the number of tests per positives plot is only outcome of the both of these plots. Basically, this visual is a combination of the daily positives and daily test visuals. By dividing the average daily tests by the average positives, the data for this plot is obtainable. Again, a column graph was used to indicate an increase and decrease in positives per case for each week.</p>
+
+```{r Plot 16: No. of tests per positive case (weekly),fig.align="center",fig.height=9, fig.width = 12 ,message=FALSE, warning=FALSE}
+plot_16_table <- sa_cases %>% mutate(weekly_tests = round(weekly_tests/weekly_cases,2)) %>%
+  filter(!is.na(weekly_tests)) %>%
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>%
+  select(date, weekly_tests)
+
+
+no_tests_per_pos_graph <- ggplot(data = plot_16_table, mapping = aes(x = date, y = weekly_tests))+
+  geom_col(fill = "#3895D3",width = 4)+
+  geom_text(aes(label = weekly_tests), hjust = -0.25)+
+  coord_flip()+
+  scale_y_continuous()+
+  scale_x_date(limits = as.Date(c("2020-04-03","2021-06-21")), date_breaks = ("1 week"), date_labels = "%d %b")+
+  labs(title = "No of tests per positive case (weekly)")+
+  theme(legend.position = "none",                                #various visual customization / no legend on graph
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank()
+        )
+
+no_tests_per_pos_graph
+```
+***
+
+### Plot 17: Daily Tests and Positive Cases
+<br>
+<p>The daily tests and positive cases plot aims to visualize the number of daily tests and positive cases over time as a *geom_point* plot. The position of a point indicates the number of tests while the size and colour of the point indicates the frequency of positive tests. The bigger the point and the lighter the hue of blue, the more positive tests were reported. Again, an increase in both tests and positive cases can be observed with each wave. A current maximum number of positive cases was observed on 2021-01-09. </p>
+
+```{r Plot 17: Daily Tests and Positive Cases, fig.align="center", fig.height=4, fig.width = 10, message=FALSE, warning=FALSE}
+plot_17_table<-sa_cases %>% select(date,tests_daily,cases_daily)%>% 
+  mutate(date=as.Date(date,"%d/%m/%Y")) %>% 
+  filter(!is.na(tests_daily)&tests_daily>=0)     #accounting for missing values and error values (e.g. negative daily tests)
+
+plot_seventeen<-plot_17_table %>% filter(date>=as.Date("2020-03-01") & date<=as.Date("2021-06-21")) %>%
+  ggplot(mapping = aes(y=tests_daily,x=date))+
+  geom_point(aes(fill=tests_daily, size=cases_daily),colour="black",pch=21)+      #point plot with scaling dot size according to cases per day/ black outline
+  
+  #labels on plot
+  geom_text(data = plot_17_table %>% filter(date == as.Date("2020-08-03")), aes(label = cases_daily),hjust=1.5, colour = "black")+
+  geom_text(data = plot_17_table %>% filter(date == as.Date("2020-12-25")), aes(label = cases_daily),vjust = -3,hjust=1.2, colour = "black")+  
+  geom_text(data = plot_17_table %>% filter(date == as.Date("2021-01-09")), aes(label = date),hjust=1,vjust = -1, colour = "grey50")+
+  geom_text(data = plot_17_table %>% filter(date == as.Date("2021-01-09")), aes(label = cases_daily),hjust=1.5, colour = "black")+
+  
+  scale_size_continuous (range = c(1, 12))+                                          #scale point size
+  scale_y_continuous(breaks = c(0,20000,40000,60000,80000))+
+  scale_x_date(date_breaks = "1 month",   #displays one day per month on plot
+               date_labels = "%d/%m")+    #displays date in required format on plot
+  labs(x="Date", y="Number of tests per day",    #add label names to axis
+       title="Daily Tests and Positive Cases",
+       vaccinated_daily = "Legend")+
+  geom_hline(yintercept=c(0,20000,40000,60000,80000), linetype="dashed", color="grey60")+
+  theme(legend.position = "none",      #various visual customization / no legend on graph 
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5))
+        )
+
+plot_seventeen
+```
+***
+
+### Plot 18: Confirmed Infections (last 20 days)
+<br>
+<p>The need for recently confirmed infections are probably one of the more important data analysis that one can do. This visual indicates the amount of confirmed cases over the past 20 day. This is done by aggregating the sum of each day's cases. This will thus give a clear depiction of recent efforts and the fluctuation of cases per day. A column graph was used to measure each day's infections with the next.</p> 
+
+```{r Plot 18: Confirmed infections (last 20 days),fig.align="center", fig.width = 8  ,message=FALSE, warning=FALSE}
+plot_18_table<-aggregate(sa_cases$cases_daily, by=list(date = sa_cases$date), F = sum) %>%    #create a cumulative column
+  filter(!is.na(date)) %>% 
+  mutate(date=as.Date(date,"%d/%m/%Y"))
+  
+confirmed_cases_20<-ggplot(data = plot_18_table, mapping = aes(x = date, y=x))+
+  geom_col(fill = "#3895D3", width = 0.8)+
+  geom_text(aes(label = x), hjust = -0.25)+
+  coord_flip()+
+  scale_y_continuous()+
+  scale_x_date(limits = as.Date(c("2021-05-31","2021-06-21")), date_breaks = ("1 day"), date_labels = "%d %b %y")+
+  labs(title = "Confirmed Infections (last 20 days)")+
+  theme(                                #various visual customization / no legend on graph    
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.x = element_blank()
+        )
+confirmed_cases_20                            
+```
+
+***
+
+### Plot 19: Positiviy Rate: Number of Tests vs Positive Cases(%)
+<br>
+<p>The Positiviy rate: number of tests vs positive cases(%) plot aims to visualize the number of daily tests and positive test rate over time as a combination *geom_col* and *geom_line* plot. An increasing trend can be observed with the rolling 7-day average line (dashed) increasing. This is in line with the expectations of a current third wave. </p>
+
+```{r Plot 19: Positiviy Rate: Number of Tests vs Positive Cases(%), fig.align="center", fig.height=5, fig.width = 10, message=FALSE, warning=FALSE}
+plot_nineteen_table<-sa_cases %>% select(date,cases_daily, tests_daily)%>% 
+  mutate(date=as.Date(date,"%d/%m/%Y"), positive_rate = round(cases_daily/tests_daily*100))%>%   #calculating positive test rate
+  filter(date>=as.Date("2021-05-27") & date<=as.Date("2021-06-21"))
+
+factor=1600
+
+plot_nineteen<-plot_nineteen_table %>%
+  ggplot(mapping = aes(x=date))+
+  geom_col(aes(y=tests_daily),fill="#3895D3", width = 0.8, alpha = 0.9)+    #assigning line types as in the specification 
+  geom_line(aes(y=positive_rate*factor),color="navy" ,size=1)+
+  geom_line(aes(y=rollmean(positive_rate, 7, na.pad=T)*1500), color="grey30", size=0.8, linetype="dashed") +    #7 day average with rollmean
+  scale_x_date(limits = as.Date(c("2021-06-01","2021-06-21")), date_breaks = "1 day",   #displays per day
+                date_labels = "%d/%m")+
+  scale_y_continuous(n.breaks=7, limits=c(0, 70000), sec.axis = sec_axis(~./1600, name = "",
+                                                               labels = function(b) { paste0(round(b, 0), "%")}))+  #proper labeling/adding % behind each value
+  labs(x="Date", y="Number of tests per day",    #add label names to axis
+       title="Positiviy Rate: Number of Tests vs Positive Cases(%)"
+       )+
+  theme(legend.position = "none",      #various visual customization / no legend on graph 
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey70", linetype = "dashed"),     #use instead of geom_hline
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        #plot.subtitle = element_text(colour = "grey40"),
+        axis.title=element_blank(),
+        axis.text.x = element_text(angle = 45),
+        axis.ticks = element_blank()
+        )
+plot_nineteen
+```
+***
+
+### Plot 20: National Hospital Admissions
+<br>
+<p>As a general preemptive indication for the health care infrastructure, the hospital admissions indicate the amount of cases that needed hospitalisation in order to recover. The week amount of cases per week is measured using the EPI-week variable in order to track each week's admissions. Thus, because not all of the infected citizens need medical care, a line graph is best suited to see see the increase and decrease of admissions per week during a specific time frame. This could also be used to visually represent the amount of hospitalisations needed during each specific level of 'lockdown'.</p>   
+
+```{r Plot 20: National Hospital Admissions, fig.align="center", fig.height=4, fig.width = 10, message=FALSE, warning=FALSE}
+plot_20_table <- sa_hospitalisations  %>% 
+  select(week_start, total_national_hospital_admissions, week)
+
+hospital_add_graph <- ggplot(data = plot_20_table, mapping = aes( y = total_national_hospital_admissions, x = week_start))+
+  geom_line(stat = "identity", color = "#3895D3", size=2)+
+  geom_hline(yintercept=c(0,5000, 10000, 15000, 20000), linetype="dashed", color="grey60")+
+  scale_y_continuous()+
+  scale_x_date(breaks = as.Date(c("2020-07-01","2021-06-21")), date_breaks = "1 week", labels = scales::date_format("%W"),
+               sec.axis = sec_axis(~.-1, labels = scales::date_format("%d %b")))+
+  labs(title = "National Hospital Admissions")+
+  theme(panel.grid = element_blank(),
+        axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        #plot.subtitle = element_text(colour = "grey60")
+        )
+hospital_add_graph
+```
+***
+
+### Plot 21: Current Rt Estimates for South Africa
+<br>
+<p>Firstly the Rt, or reproduction rate indicates the amount of positive cases that a single positive cases infected. Thus, the higher the Rt rate, the higher the amount of potential positive cases. Because this is only an estimated rate of possible infections, standard deviation is needed to give credibility to each possible reproduction. A 90% credible intervention ensures that the estimated rates are as accurate as possible. A ribbon geom was used in order to give each of the reproduction rate 'points' a standard deviation. The combination of a line graph and a point graph was used to indicate growth and decline in possible reproductive cases. As the pandemic moves on, and people become more wary to the transmit-ability of COVID-19, the lower the general reproduction rate would be. For instance, if the Rt is 1.38, that means that for every single positive case, 1.38 people get infected. This is only an estimate and should not be taken as fact.</p> 
+
+```{r Plot 21: Current Rt estimates for South Africa, fig.align="center", fig.height=4, fig.width = 10, message=FALSE, warning=FALSE}
+plot_21_table<-sa_reproduction_rate %>% 
+  select(date, reproduction_rate) %>% 
+  mutate(date=as.Date(date,"%d/%m/%Y"))
+
+rt_estimates_graph <- ggplot(data = plot_21_table, mapping = aes(x= date, y = reproduction_rate))+
+  geom_point(color="#3895D3", size = 1.8)+
+  geom_line(color="#3895D3" ,size=1)+
+  geom_ribbon(mapping = aes(ymin = plot_21_table$reproduction_rate -0.1,                                                 #used for standard deviation
+                            ymax = plot_21_table$reproduction_rate +0.1), alpha = 0.25, fill = "grey40")+                                                   
+  geom_text(data = plot_21_table %>% filter(date == as.Date("2021-06-21")), aes(y = reproduction_rate, 
+                                                                                label = reproduction_rate), vjust=-0.6)+  #label value on last known date
+  scale_y_continuous(limits = c(0.0, 3.0), breaks = seq(0, 3.0, by = 0.5))+
+  scale_x_date(breaks = as.Date(c("2020-03-19","2021-06-21")),date_breaks = ("3 months"), date_labels = "%b %y", expand = c(0.05,0))+
+  geom_hline(yintercept = 1, linetype = "dashed", color = "navy", size = 0.8)+
+  labs(title = "Current Rt Estimates for South Africa")+
+  theme(
+        panel.grid = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.ticks = element_blank(),
+        panel.border = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey70", linetype = "dashed", size=0.5),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        plot.subtitle = element_text(colour = "grey40")
+        )
+rt_estimates_graph
+```
+***
+
+### Plot 22: Excess Deaths
+<br>
+<p>The Excess deaths plot aims to visualize the number of excess deaths over time as a *geom_bar* plot. Each bar includes the cumulative excess deaths from May 2020 and shows weekly increments as differences between them. An increasing trend can be observed as we are in the third wave of infections. No excess death data on SAMRC after the 13th of June at the time of writing. </p>
+
+```{r Plot 22: Excess Deaths, fig.align="center", fig.width = 8, message=FALSE, warning=FALSE}    
+excess_deaths<-excess_deaths %>% 
+  mutate(cum_excess_deaths=cumsum(RSA))    #adding a cumulative column to national excess_deaths 
+
+plot_22_table<- merge(excess_deaths, sa_cases, by = "date")%>%      
+  select(date,cum_excess_deaths, cumulative_deaths) %>% 
+  mutate(date=as.Date(as.character(date),"%d/%m/%Y")) %>% 
+  filter(date>=as.Date("2021-05-30"))  
+  #pivot_longer(c(`cumulative_deaths`,`cum_excess_deaths`), names_to = "type", values_to = "deaths")
+
+plot_22<-plot_22_table %>%ggplot(mapping = aes(x = date, y = cum_excess_deaths)) + 
+  geom_bar(aes(y=cum_excess_deaths), stat="identity", position ="identity", fill="#3895D3", width = 4, alpha=0.7)+
+  geom_bar(aes(y=cumulative_deaths, fill="Reported Covid-19 Deaths"), stat="identity", position ="identity", width = 4, alpha=0.6)+
+  scale_fill_manual(values=c("Reported Covid-19 Deaths" ="navy"))+                        #adding legend labels based off color of bars
+  scale_x_date(date_breaks = "7 days",   #displays one day per month on plot
+               date_labels = "%d %B")+
+  scale_y_continuous(limits=c(0,200000))+
+  labs(x="Date", y="Deaths",    #add labels to axis
+       title="Excess Deaths")+
+  geom_text(aes(label = cum_excess_deaths), position=position_dodge(width=0.9), vjust=-0.25)+
+  geom_text(aes(label = cumulative_deaths), position=position_dodge(width=0.9), vjust=15)+
+  geom_hline(yintercept=c(0,100000,200000), linetype="dashed", color="grey70")+
+  theme_minimal()+
+  theme(legend.position = "top",      #various visual customization / no legend on graph
+        legend.title = element_blank(),
+        panel.grid = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        #plot.subtitle = element_text(colour = "grey60"),
+        axis.title=element_blank(),
+        axis.ticks = element_blank()
+        )
+plot_22
+```
+
+***
+
+### Plot 23: Excess Deaths(Provinces)
+<br>
+<p>The Excess deaths per province plot aims to visualize the number of excess deaths per province over time as a *geom_bar* plot. Each bar includes the cumulative excess deaths from May 2020 and shows weekly increments as differences between them. As stated previously, an increasing trend can be observed as we are in the third wave of infections. Covid-19 related deaths account for the bulk of the excess deaths in the Western Cape. It is the only province where Covid-19 deaths are observed to account for the majority of excess deaths. </p>
+
+```{r Plot 23: Excess Deaths(Provinces), fig.align="center", fig.width = 8, message=FALSE, warning=FALSE}
+province_data_merge<-province_data %>% select(province_id,daily_deaths) %>%      #gathering data from first data set
+  group_by(province_id) %>%                                                      #aggregating deaths by province
+  summarise_each(funs(sum)) %>% 
+  filter(province_id!="U") %>%
+  rename(province = province_id, covid_deaths=daily_deaths)
+
+plot_23_table<- excess_deaths %>%                                                # gathering data from second data set
+  pivot_longer(c(`EC`,`FS`,`GP`,`KZN`,`LP`,`MP`,`NC`,`NW`,`WC`), names_to = "province", values_to = "deaths") %>%    #pivoting
+  select(province,deaths)%>% 
+  group_by(province) %>% summarise_each(funs(sum))
+
+plot_23_table<- merge(plot_23_table, province_data_merge, by = "province")        #merging province_data and excess_deaths data
+
+
+plot_23<-plot_23_table %>%ggplot(mapping = aes(x=reorder(province,desc(deaths)), y =deaths))+ 
+  geom_bar(aes(y=deaths), stat="identity", position ="identity", fill="#3895D3", width = 0.8, alpha=0.7)+
+  geom_bar(aes(y=covid_deaths), stat="identity", position ="identity",  fill="navy",width = 0.8, alpha=0.6)+
+  scale_y_continuous(breaks=c(0,20000,40000))+
+  labs(x="Province", y="Deaths",    #add labels to axis
+       title="Excess Deaths (Provinces)",
+       subtitle = "Data for week ending 13 June")+
+  geom_hline(yintercept=c(0,20000,40000), linetype="dashed", color="grey70")+
+  geom_text(aes(label = deaths), position=position_dodge(width=0.9), vjust=-0.25)+
+  theme(legend.position = "none",      #various visual customization / no legend on graph 
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        plot.subtitle = element_text(colour = "grey40"),
+        axis.title=element_blank(),
+        axis.ticks = element_blank()
+        )
+plot_23
+```
+
+***
+
+### Plot 24: Excess Deaths(Metros)
+<br>
+<p>The Excess deaths by metro plot aims to visualize the number of excess deaths per metro over time as a *geom_bar* plot. Each bar includes the cumulative excess deaths from May 2020 and shows weekly increments as differences between them. At the time of writing, no data could be found on Covid-19 deaths within specific metros. </p>
+
+```{r Plot 24: Excess Deaths(Metros), fig.align="center", fig.width = 8, message=FALSE, warning=FALSE}
+plot_24_table<- excess_deaths %>% 
+  pivot_longer(c(`BUF`,`CPT`,`EKU`,`ETH`,`JHN`,`MAN`,`NMA`,`TSH`), names_to = "metro", values_to = "deaths") %>%    #pivoting
+  select(metro,deaths) %>% 
+  filter(deaths>=0) %>% 
+  group_by(metro) %>%                                                      #aggregating deaths by metro
+  summarise_each(funs(sum))
+
+plot_24<-plot_24_table %>%ggplot(mapping = aes(x=reorder(metro,desc(deaths)), y =deaths))+ 
+  geom_bar(aes(y=deaths), stat="identity", position ="identity", fill="#3895D3", width = 0.8, alpha=0.9)+
+  #geom_bar(aes(y=covid_deaths), stat="identity", position ="identity",  fill="navy",width = 0.8, alpha=0.6)+
+  scale_y_continuous(limit=c(0,15000))+
+  labs(x="Metro", y="Deaths",    #add labels to axis
+       title="Excess Deaths (Metros)",
+       subtitle = "Data for week ending 13 June")+
+  geom_hline(yintercept=c(0,5000,10000,15000), linetype="dashed", color="grey70")+
+  geom_text(aes(label = deaths), position=position_dodge(width=0.9), vjust=-0.25)+
+  theme(legend.position = "none",      #various visual customization / no legend on graph 
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        plot.subtitle = element_text(colour = "grey40"),
+        axis.title=element_blank(),
+        axis.ticks = element_blank()
+        )
+plot_24
+```
+
+***
+
+### Plot 25: New daily confirmed Covid-19 cases: 7-day average
+<br>
+<p>The new daily confirmed Covid-19 cases: 7-day average plot aims to visualize the number of positive Covid-19 cases per world region over time as a *geom_line* plot. Each line represents a different region/continent. The line plot is useful for comparison across different regions and shows the different waves as well as what regions are leading or lagging in terms of the next wave of increased infections. Europe seems to be leading the waves while Asia was hardest hit by the third wave. As a lagging region, Africa is only now beginning to experience the effects of the third wave.</p>
+
+```{r Plot 25: New daily confirmed Covid-19 cases: 7-day average, fig.align="center", fig.width=10, fig.height=5, message=FALSE, warning=FALSE}
+plot_25_table<-continents_daily_cases %>%                    
+  mutate(date=as.Date(as.character(date),"%d/%m/%Y")) %>% 
+  filter(date>=as.Date("2020-02-13"))                        #from this date - one day before the first reported case in Africa
+
+plot_25<-plot_25_table %>% 
+  ggplot(mapping = aes(x=date,y=rollmean(new_cases,7,na.pad = T)))+
+  geom_line(aes(colour=location), size=1)+
+  scale_x_date(limits = as.Date(c("2020-03-01","2021-06-22")), date_breaks = "1 months",   #displays per day
+                date_labels = "%b")+
+  scale_y_continuous(labels = function(x) format(x, scientific = F))+            #prevent y-axis from showing values in scientific format
+  scale_colour_brewer(palette = "Set1")+                                        # line colour customization / easily distinguishable 
+  labs(x="Date", y="New daily cases",                                            #add labels to axis
+       title="New daily confirmed Covid-19 cases: 7-day average")+
+  theme(legend.position = "right",      #various visual customization / no legend on graph 
+        legend.title = element_blank(),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.major.y = element_line(colour = "grey70", linetype = "dashed"),     #use instead of geom_hline
+        panel.grid.minor.y = element_line(colour = "grey70", linetype = "dashed"),     #use instead of geom_hline
+        plot.margin=unit(c(0.5,0.5,1,1),"cm"),
+        plot.title = element_text(face="bold",size = rel(1.5)),
+        #plot.subtitle = element_text(colour = "grey60"),
+        axis.title=element_blank(),
+        axis.ticks = element_blank()
+        )
+plot_25
+```
+***
+
+# **Section 3**
+
+## Reflection
+<br>
+<p>Upon completion of the above-mentioned visualizations, the rewarding nature of representing data in such a fashion becomes apparent. With a limited background of coding within the data analysis field, the difficulties we faced were mainly wrangling and cleaning the data sets using Rstudio. Even after two weeks of learning and practice during the data analysis block, we soon realized we were not yet experts in the field. This was because we still lacked the experience and forward-thinking needed to make sure the correct data is sorted and cleaned in order to successfully re-create all of the visualizations. Forward-thinking means that we had to think ahead of what the final visual would look like. We had to ensure that the data is not only accurate and up to date, but also wrangled and processed in such a way that no errors will be thrown when the visual is constructed. Thus, to reflect, the main purpose of this assignment was to re-create as many visualizations as possible, which we did in a way that we both find satisfactory. Although some plots -- such as the doubling rates visual -- offered more of a challenge, both of us knew what to do, but the how and the execution were at times a struggle. That being said, the fulfillment we received when a plot was accurately visualized made the late night struggles worth it.</p>
+
+## Conclusion
+<br>
+<p>After sifting and searching through vast amounts of data sets and then wrangling and cleaning the data into a usable state, the need for and the importance of data analysis becomes apparent. Not only do these methods (i.e., tidying and transforming) optimize the data sets for further use, but they also encapsulate on the bigger organisational picture. Ensuring complete and non-redundant data is something that all organisations should put vast amounts of resources into. Furthermore, the more complete data is stored, the higher the probability to ensure more accurate data analytics and further increases the timeliness of said analytics. This assignment was a clear indication that data needs to be as complete as possible in order to accurately represent it in a visual fashion to those who make the important decisions. The visualization of data is thus only the reward of successfully cleaning and wrangling data.</p>
+
+<br>
+
+
+
+
+
